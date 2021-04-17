@@ -17,19 +17,16 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 
-#define DM510_MR _IOW('a','a',int32_t*)
-#define DM510_BS _IOW('a','b',int32_t*)
+#define DM510_MR _IOW('a','a',int*)
+#define DM510_BS _IOW('a','b',int*)
 
 int main(int argc, char *argv[])
 {
     //pid_t pid;
-    int fd;
-    int32_t mr = 0; 
-    printf("hello\n");
-    //*mr =(int32_t) 1;
-    printf("Hello2\n");
-    printf("%d\n", mr);
+    int fd, mr = 0;
+     
     fd = open("/dev/dm510-0", O_RDWR);
     ioctl(fd, DM510_MR, &mr);
+    close(fd);
     return 0;
 }
