@@ -248,6 +248,7 @@ static ssize_t dm510_read( struct file *filp,
 	wake_up_interruptible(&dev->outq);
 	wake_up_interruptible(&dev->inq);
 	mutex_unlock(&dev->mutex);
+	
 //	printk(KERN_INFO "Read finished");
 	return count; //return number of bytes read	
 }
@@ -281,10 +282,6 @@ static int dm510_getwritespace(struct dm510_mod *dev,
 		if (wait_event_interruptible(dev->other->outq, (spacefree(dev) != 0)))
 			return -ERESTARTSYS;
 //		printk(KERN_INFO "Acquiring lock\n");
-		wake_up_interruptible(&dev->other->inq);
-		wake_up_interruptible(&dev->other->outq);
-		wake_up_interruptible(&dev->outq);
-		wake_up_interruptible(&dev->inq);
 		if (mutex_lock_interruptible(&dev->other->mutex))
 			return -ERESTARTSYS;
 //		printk(KERN_INFO "Lock acquired\n");
@@ -324,11 +321,9 @@ static ssize_t dm510_write( struct file *filp,
 	if (dev->wp == dev->other->end)
 		dev->wp = dev->other->buffer;
 //	printk(KERN_INFO "Write pointer has been updated\n");
-	mutex_unlock(&dev->other->mutex);
 	wake_up_interruptible(&dev->other->outq);
 	wake_up_interruptible(&dev->other->inq);
-	wake_up_interruptible(&dev->outq);
-	wake_up_interruptible(&dev->inq);
+	mutex_unlock(&dev->other->mutex);
 //	printk(KERN_INFO "Write finished\n");
 	return count; //return number of bytes written	
 }
@@ -389,18 +384,7 @@ static int update_readers(struct file *filp, int32_t *arg){
 	int newmax;
 	if(get_user(newmax, arg))
 		return -EFAULT;
-	//printk(KERN_INFO "Updating max number of readers\n");
-	if(mutex_lock_interruptible(&dev->mutex))
-	                return -ERESTARTSYS;
-	if(mutex_lock_interruptible(&dev->other->mutex))
-	                return -ERESTARTSYS;
-	//printk(KERN_INFO "Copying from userspace\n");
-	//printk(KERN_INFO "Assigning maxreaders to: %d\n", newmax);
 	maxreaders = newmax;
-
-	mutex_unlock(&dev->mutex);
-	mutex_unlock(&dev->other->mutex);
-	//printk(KERN_INFO "New maxreaders is: %d\n", maxreaders);
 	return 0;
 }
 
