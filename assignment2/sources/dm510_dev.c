@@ -38,8 +38,8 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 #define DEVICE_COUNT 2
 
-#define DM510_MR _IOW('a','a',int32_t*)
-#define DM510_BS _IOW('a','b',int32_t*)
+#define DM510_MR _IOW('a','a',int*)
+#define DM510_BS _IOW('a','b',int*)
 
 /* end of what really should have been in a .h file */
 
@@ -173,14 +173,16 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 	struct dm510_mod *dev;
 
 	dev = container_of(inode -> i_cdev, struct dm510_mod, cdev);
-	if(dev->nreaders >= maxreaders)
+	if(mutex_lock_interruptible(&dev->mutex))
+		return -ERESTARTSYS;
+	
+	if(dev->nreaders >= maxreaders){
+		mutex_unlock(&dev->mutex);
 		return -EBUSY;
+	}
 	filp->private_data = dev;
 //	printk(KERN_INFO "nreaders is: %ld\n", dev->nreaders);	
-//	printk(KERN_INFO "Called open\n");
-
-	if(mutex_lock_interruptible(&dev->mutex))
-		return -ERESTARTSYS;	
+//	printk(KERN_INFO "Called open\n");	
 
 	if(filp->f_mode & FMODE_READ)
 		dev->nreaders++;
@@ -245,6 +247,7 @@ static ssize_t dm510_read( struct file *filp,
 	dev->rp += count;
 	if (dev->rp == dev->end)
 		dev->rp = dev->buffer; /* wrapped */
+	
 	wake_up_interruptible(&dev->outq);
 	wake_up_interruptible(&dev->inq);
 	mutex_unlock(&dev->mutex);
@@ -281,10 +284,6 @@ static int dm510_getwritespace(struct dm510_mod *dev,
 		if (wait_event_interruptible(dev->other->outq, (spacefree(dev) != 0)))
 			return -ERESTARTSYS;
 //		printk(KERN_INFO "Acquiring lock\n");
-		wake_up_interruptible(&dev->other->inq);
-		wake_up_interruptible(&dev->other->outq);
-		wake_up_interruptible(&dev->outq);
-		wake_up_interruptible(&dev->inq);
 		if (mutex_lock_interruptible(&dev->other->mutex))
 			return -ERESTARTSYS;
 //		printk(KERN_INFO "Lock acquired\n");
@@ -324,11 +323,11 @@ static ssize_t dm510_write( struct file *filp,
 	if (dev->wp == dev->other->end)
 		dev->wp = dev->other->buffer;
 //	printk(KERN_INFO "Write pointer has been updated\n");
+	
 	mutex_unlock(&dev->other->mutex);
 	wake_up_interruptible(&dev->other->outq);
 	wake_up_interruptible(&dev->other->inq);
-	wake_up_interruptible(&dev->outq);
-	wake_up_interruptible(&dev->inq);
+	
 //	printk(KERN_INFO "Write finished\n");
 	return count; //return number of bytes written	
 }
@@ -391,15 +390,18 @@ static int update_readers(struct file *filp, int32_t *arg){
 		return -EFAULT;
 	//printk(KERN_INFO "Updating max number of readers\n");
 	if(mutex_lock_interruptible(&dev->mutex))
-	                return -ERESTARTSYS;
-	if(mutex_lock_interruptible(&dev->other->mutex))
-	                return -ERESTARTSYS;
+	        return -ERESTARTSYS;
+	if(mutex_lock_interruptible(&dev->other->mutex)){
+		mutex_unlock(&dev->mutex);
+		return -ERESTARTSYS;
+	}
 	//printk(KERN_INFO "Copying from userspace\n");
 	//printk(KERN_INFO "Assigning maxreaders to: %d\n", newmax);
 	maxreaders = newmax;
 
-	mutex_unlock(&dev->mutex);
 	mutex_unlock(&dev->other->mutex);
+	mutex_unlock(&dev->mutex);
+	
 	//printk(KERN_INFO "New maxreaders is: %d\n", maxreaders);
 	return 0;
 }
@@ -414,11 +416,11 @@ long dm510_ioctl(
 	
 	switch(cmd){
 	case DM510_MR:{
-			update_readers(filp, (int32_t*) arg);
+			update_readers(filp, (int*) arg);
 			break;
 		      }
 	case DM510_BS:{
-			updatebuffer(filp, (int32_t*) arg);
+			updatebuffer(filp, (int*) arg);
 			break;
 		      }
 	}

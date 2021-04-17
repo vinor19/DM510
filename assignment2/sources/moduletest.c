@@ -19,8 +19,8 @@
 
 #define ITS 10000
 
-#define DM510_MR _IOW('a','a',int32_t*)
-#define DM510_BS _IOW('a','b',int32_t*)
+#define DM510_MR _IOW('a','a',int*)
+#define DM510_BS _IOW('a','b',int*)
 
 
 void read_all(int fd, void *buf, int count) {
@@ -58,10 +58,6 @@ int main(int argc, char *argv[])
     int sum = 0, i;
     int val;
     int cnt;
-    int32_t *mr;
-    *mr =(int32_t) 1;
-    printf("%d\n", *mr);
-
     pid = fork();
 
     if (pid == 0) {
@@ -102,9 +98,6 @@ int main(int argc, char *argv[])
 	    write_all(fd, &val, 4);
         }
       	printf("2. expected result: %d\n", sum);
-   	ioctl(fd,DM510_MR,mr);
-	*mr = 10;
-	ioctl(fd,DM510_BS,mr);
 	wait(NULL);
    }
     return 0;
