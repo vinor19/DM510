@@ -110,12 +110,12 @@ const char *pathRebuild(char**path, int length){
 		strcat(result,"/");
 		strcat(result, path[i]);
 	}
-	printf("PathRebuild, string concatinated %s\n", result);
+	//printf("PathRebuild, string concatinated %s\n", result);
 	return result;
 }
 
 struct lfs_file *findFile(const char* path){
-	printf("findFile: (path=%s)\n", path);
+	//printf("findFile: (path=%s)\n", path);
 	if(strcmp(path,"/") == 0){
 		//printf("file was root\n");
 		return root;
@@ -154,7 +154,6 @@ struct lfs_file *findFile(const char* path){
 			//printf("File was found on given path, file found was %s\n", foundfile->name);
 			return foundfile;
 		}else{
-
 			//printf("File was not found on given path\n");
 			return NULL;
 		}
@@ -163,7 +162,7 @@ struct lfs_file *findFile(const char* path){
 
 //Makes a directory from path
 int lfs_mkdir(const char *path, mode_t mode) {
-	printf("mkdir: (path=%s)\n", path);
+	//printf("mkdir: (path=%s)\n", path);
 	(void)mode;
 	struct lfs_file *file = calloc(1, sizeof(struct lfs_file));
 	char *tmp = calloc(1,strlen(path) + 1);
@@ -217,7 +216,7 @@ int lfs_mkdir(const char *path, mode_t mode) {
 		foundfile->dir[foundfile->size] = file;
 		foundfile->size++;
 		foundfile->entries++;
-		printf("Folder %s has been made in %s\n",file->name,file->path[file->depth-2]);
+		//printf("Folder %s has been made in %s\n",file->name,file->path[file->depth-2]);
 		time(&foundfile->access_time);
 		time(&foundfile->modification_time);
 	}
@@ -227,7 +226,7 @@ int lfs_mkdir(const char *path, mode_t mode) {
 
 //Removes the director on that path
 int lfs_rmdir(const char *path){
-	printf("rmdir: (path=%s)\n", path);
+	//printf("rmdir: (path=%s)\n", path);
 	//printf("RMDIR STARTED\n");
 	struct lfs_file *folderDelete = calloc(1,sizeof(struct lfs_file));
 	folderDelete = findFile(path);
@@ -262,7 +261,7 @@ int lfs_rmdir(const char *path){
 }
 
 int lfs_mknod(const char *path, mode_t mode, dev_t device){
-	printf("mknod: (path=%s)\n", path);
+	//printf("mknod: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	char *tmp = calloc(1,strlen(path) + 1);
 	strcpy(tmp, path);
@@ -314,7 +313,7 @@ int lfs_mknod(const char *path, mode_t mode, dev_t device){
 }
 
 int lfs_unlink(const char *path){
-	printf("unlink: (path=%s)\n", path);
+	//printf("unlink: (path=%s)\n", path);
 	//printf("UNLINK STARTED\n");
 	struct lfs_file *fileDelete = calloc(1,sizeof(struct lfs_file));
 	fileDelete = findFile(path);
@@ -350,18 +349,18 @@ int lfs_unlink(const char *path){
 }
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
-	printf("%ld\n",sizeof(struct lfs_file));
-	printf("Get attribute started\n");
+	//printf("%ld\n",sizeof(struct lfs_file));
+	//printf("Get attribute started\n");
 	int res = 0;
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
-	printf("getattr: (path=%s)\n", path);
-	printf("Finding file\n");
+	//printf("getattr: (path=%s)\n", path);
+	//printf("Finding file\n");
 	file = findFile(path);
-	printf("Found something\n");
+	//printf("Found something\n");
 
 
 	memset(stbuf, 0, sizeof(struct stat));
-	printf("stbuf set to 0\n");
+	//printf("stbuf set to 0\n");
 	if( strcmp( path, "/" ) == 0 ) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
@@ -380,22 +379,22 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 			stbuf->st_mtime = file->modification_time;
 		} else
 			res = -ENOENT;
-	printf("What is res: %d\n", res);
+	//printf("What is res: %d\n", res);
 	return res;
 }
 
 int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ) {
-	printf("readdir: (path=%s)\n", path);
+	//printf("readdir: (path=%s)\n", path);
 	(void) offset;
 	(void) fi;
 	
 
-	printf("Filler . and ..\n");
+	//printf("Filler . and ..\n");
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
 	struct lfs_file *foundFile = calloc(1,sizeof(struct lfs_file));
 	foundFile = findFile(path);
-	printf("Foundfile %s\n",foundFile->name);
+	//printf("Foundfile %s\n",foundFile->name);
 	if(foundFile != NULL){
 		//printf("FolderSize: %ld\n",foundFile->size);
 		//printf("FolderName: %s\n",foundFile->name);
@@ -418,7 +417,7 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
-    printf("open: (path=%s)\n", path);
+    //printf("open: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	if((file = findFile(path)) == NULL)
 		return -ENOENT;
@@ -428,7 +427,7 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 
 //Truncates
 int lfs_truncate(const char *path, off_t offset){
-	printf("truncate: (path=%s)\n", path);
+	//printf("truncate: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	file = findFile(path);
 
@@ -441,7 +440,7 @@ int lfs_truncate(const char *path, off_t offset){
 }
 
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
-    printf("read: (path=%s)\n", path);
+    //printf("read: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	file = findFile(path);
 	//file = (struct lfs_file*) fi->fh;
@@ -458,7 +457,7 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 }
 
 int lfs_write(const char *path, const char *content, size_t size, off_t offset, struct fuse_file_info *fi){
-	printf("read: (path=%s)\n", path);
+	//printf("read: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	file = findFile(path);
 	//file = (struct lfs_file*) fi->fh;
@@ -482,20 +481,20 @@ int lfs_write(const char *path, const char *content, size_t size, off_t offset, 
 }
 
 int lfs_release(const char *path, struct fuse_file_info *fi) {
-	printf("release: (path=%s)\n", path);
+	//printf("release: (path=%s)\n", path);
 	return 0;
 }
 
 //Write file to disk
 void lfs_writeFileToDisk(struct lfs_file *file, FILE *disk){
-	printf("Writing %s to disk\n", file->name);
+	//printf("Writing %s to disk\n", file->name);
 	fwrite(&file->file_type, sizeof(int), 1, disk); //File type
 	const char *path = pathRebuild(file->path,file->depth);
-	printf("%s\n", path);
+	//printf("%s\n", path);
 	size_t length = strlen(path);
 	fwrite(&length,sizeof(size_t),1,disk); //Length of path
 	fwrite(path, strlen(path), 1, disk); //The path itself
-	printf("%s\n", path);
+	//printf("%s\n", path);
 	//Meta info
 	fwrite(&file->access_time, sizeof(time_t),1,disk);
 	fwrite(&file->modification_time, sizeof(time_t),1,disk);
@@ -507,14 +506,14 @@ void lfs_writeFileToDisk(struct lfs_file *file, FILE *disk){
 
 //Write folder to disk
 void lfs_writeFolderToDisk(struct lfs_file *folder, FILE *disk){
-	printf("Writing %s to disk\n", folder->name);
+	//printf("Writing %s to disk\n", folder->name);
 	fwrite(&folder->file_type, sizeof(int), 1, disk);//File type
 	const char *path = pathRebuild(folder->path,folder->depth);
-	printf("%s\n", path);
+	//printf("%s\n", path);
 	size_t length = strlen(path);
 	fwrite(&length,sizeof(size_t),1,disk);//Path length
 	fwrite(path, strlen(path), 1, disk);//Path
-	printf("%s\n", path);
+	//printf("%s\n", path);
 	//Metainfo
 	fwrite(&folder->access_time, sizeof(time_t),1,disk);
 	fwrite(&folder->modification_time, sizeof(time_t),1,disk);
@@ -530,7 +529,7 @@ void lfs_writeFolderToDisk(struct lfs_file *folder, FILE *disk){
 }
 
 void lfs_destroy(struct fuse *f){
-	printf("Destroy started\n");
+	//printf("Destroy started\n");
 	FILE *disk = fopen("/tmp/disk.img","wb");
 	for(int i = 0; i < root->size; i++)
 		if(root->dir[i] != NULL){
@@ -547,7 +546,7 @@ void lfs_destroy(struct fuse *f){
 
 int main( int argc, char *argv[] ) {
 	FILE *disk = fopen("/tmp/disk.img","rb");
-	printf("%ld\n",sizeof(struct lfs_file));
+	//printf("%ld\n",sizeof(struct lfs_file));
 	root = calloc(1,sizeof(struct lfs_file));
 	root->name = "/";
 	root->path = calloc(1,sizeof(char*));
@@ -564,15 +563,15 @@ int main( int argc, char *argv[] ) {
 	size_t pathlength = 0;
 	char *path;
 	int filetype = 0;
-	printf("Starting to read the file\n");
+	//printf("Starting to read the file\n");
 	if(disk != NULL){
 		while(fread(&filetype, sizeof(int), 1, disk)>0){
-			printf("Read filetype, it is %d\n", filetype);
+			//printf("Read filetype, it is %d\n", filetype);
 			fread(&pathlength, sizeof(size_t), 1, disk);
-			printf("Read path length, it is %ld\n", pathlength);
+			//printf("Read path length, it is %ld\n", pathlength);
 			path = calloc(1,pathlength);
 			fread(path, pathlength, 1, disk);
-			printf("Read path, it is %s\n", path);
+			//printf("Read path, it is %s\n", path);
 			if(filetype == 0){
 				lfs_mkdir(path, NULL);
 				struct lfs_file *folder = calloc(1,sizeof(struct lfs_file));
