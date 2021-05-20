@@ -374,7 +374,6 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	(void) offset;
 	(void) fi;
 	
-
 	//printf("Filler . and ..\n");
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
@@ -412,19 +411,20 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 }
 
 //Truncates
-int lfs_truncate(const char *path, off_t offset){
+int lfs_truncate(const char *path, off_t size){
 	//printf("truncate: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 	file = findFile(path);
 
 	if(file == NULL)
 		return -ENOENT;
-	file->size = offset;
+	file->size = size;
 	time(&file->access_time);
 	time(&file->modification_time);
 	return 0;
 }
 
+//Reads contents to the buffer
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
     //printf("read: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
@@ -434,14 +434,13 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 		return -ENOENT;
 	
 	int read = size;
-	if(offset+size > file->size)
-		read = file->size - offset;
 
 	memcpy( buf, file->contents+offset, read );
 	time(&file->access_time);
 	return read;
 }
 
+//Writes size amount of chars to the content of the file with an offset
 int lfs_write(const char *path, const char *content, size_t size, off_t offset, struct fuse_file_info *fi){
 	//printf("read: (path=%s)\n", path);
 	struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
@@ -452,6 +451,7 @@ int lfs_write(const char *path, const char *content, size_t size, off_t offset, 
 	
 	int sizeAfterWrite = offset + size;
 
+	//Updates size of contents if necesarry
 	if(sizeAfterWrite > file->maxSize){
 		file->maxSize = sizeAfterWrite*2;
 		char *newContents = calloc (1,file->maxSize);
@@ -466,6 +466,7 @@ int lfs_write(const char *path, const char *content, size_t size, off_t offset, 
 	return size;
 }
 
+//Release, doesn't do anything except return 0
 int lfs_release(const char *path, struct fuse_file_info *fi) {
 	//printf("release: (path=%s)\n", path);
 	return 0;
@@ -514,6 +515,7 @@ void lfs_writeFolderToDisk(struct lfs_file *folder, FILE *disk){
 	lfs_rmdir(path);
 }
 
+//Saves and frees the entire filesystem
 void lfs_destroy(struct fuse *f){
 	//printf("Destroy started\n");
 	FILE *disk = fopen("/tmp/disk.img","wb");
@@ -530,6 +532,7 @@ void lfs_destroy(struct fuse *f){
 	fclose(disk);
 }
 
+//Main function, creates the root folder and loads in the filesystem (if it exists)
 int main( int argc, char *argv[] ) {
 	FILE *disk = fopen("/tmp/disk.img","rb");
 	//printf("%ld\n",sizeof(struct lfs_file));
@@ -558,21 +561,22 @@ int main( int argc, char *argv[] ) {
 			path = calloc(1,pathlength);
 			fread(path, pathlength, 1, disk);
 			//printf("Read path, it is %s\n", path);
-			if(filetype == 0){
+			if(filetype == 0){ //Reading folder
 				lfs_mkdir(path, NULL);
 				struct lfs_file *folder = calloc(1,sizeof(struct lfs_file));
 				folder = findFile(path);
 				fread(&folder->access_time, sizeof(time_t), 1, disk);
 				fread(&folder->modification_time, sizeof(time_t), 1, disk);
 			}
-			else if (filetype == 1){
+			else if (filetype == 1){ //Reading file
 				lfs_mknod(path,NULL,NULL);
 				struct lfs_file *file = calloc(1,sizeof(struct lfs_file));
 				file = findFile(path);
 				fread(&file->access_time, sizeof(time_t), 1, disk);
 				fread(&file->modification_time, sizeof(time_t), 1, disk);
 				fread(&file->size,sizeof(uint64_t),1,disk);
-				if(file->size>8192){ //8192 is standard size for files, if it has to read more than that, it needs to update the buffer size
+				//Updates size of contents if necesarry
+				if(file->size>file->maxSize){ 
 					file->maxSize = file->size * 2;
 					char *newContents = calloc (1,file->maxSize);
 					memcpy(newContents,file->contents,file->size);
@@ -587,7 +591,6 @@ int main( int argc, char *argv[] ) {
 		}
 		fclose(disk);
 	}
-
 	fuse_main( argc, argv, &lfs_oper );
 	return 0;
 }
